@@ -163,7 +163,7 @@ function Credits({setMenuSection}: Props) {
 			</div>
 			<h2>Donate</h2>
 			<div className={css.donate}> 
-				Currently hc-tcg online costs about $5 a month to host, but we are not looking for donations.
+				Currently hc-tcg online only costs about $5 a month to host, so we are not looking for donations.
 				if you would like to donate, please condider donating to a charity such as the
 				<a href="https://www.worldwildlife.org/">World Wildlife Fund</a>
 				instead.
