@@ -13,6 +13,7 @@ import {GameModel} from 'common/models/game-model'
 import {TypeT} from 'common/types/cards'
 import {GameOutcome, TurnAction, TurnActions} from 'common/types/game-state'
 import {
+	AnyTurnActionData,
 	AttackActionData,
 	PickSlotActionData,
 	attackToAttackAction,
@@ -364,48 +365,48 @@ function checkHermitHealth(game: GameModel) {
 
 function handleSingleTurnAction(
 	con: GameController,
-	turnAction: LocalMessageTable[typeof localMessages.GAME_TURN_ACTION],
+	turnAction: AnyTurnActionData,
 ) {
-	const actionType = turnAction.action.type
+	const actionType = turnAction.type
 
 	let endTurn = false
 
-	const availableActions =
-		turnAction.playerEntity === con.game.currentPlayer.entity
-			? con.game.state.turn.availableActions
-			: con.game.state.turn.opponentAvailableActions
+	// const availableActions =
+	// 	turnAction.playerEntity === con.game.currentPlayer.entity
+	// 		? con.game.state.turn.availableActions
+	// 		: con.game.state.turn.opponentAvailableActions
 
 	try {
 		// We don't check if slot actions are available because the playCardSaga will verify that.
 		// Forfeits are always able to be used so they are not checked.
-		assert(
-			![
-				'SINGLE_USE_ATTACK',
-				'PRIMARY_ATTACK',
-				'SECONDARY_ATTACK',
-				'CHANGE_ACTIVE_HERMIT',
-				'APPLY_EFFECT',
-				'REMOVE_EFFECT',
-				'PICK_REQUEST',
-				'MODAL_REQUEST',
-				'END_TURN',
-			].includes(actionType) || availableActions.includes(actionType),
-			`Players cannot be able to use a blocked action. This may be because the user does not have enough energy for the attack. \n Action:${JSON.stringify(turnAction.action, null, 2)}`,
-		)
+		// assert(
+		// 	![
+		// 		'SINGLE_USE_ATTACK',
+		// 		'PRIMARY_ATTACK',
+		// 		'SECONDARY_ATTACK',
+		// 		'CHANGE_ACTIVE_HERMIT',
+		// 		'APPLY_EFFECT',
+		// 		'REMOVE_EFFECT',
+		// 		'PICK_REQUEST',
+		// 		'MODAL_REQUEST',
+		// 		'END_TURN',
+		// 	].includes(actionType) || availableActions.includes(actionType),
+		// 	`Players cannot be able to use a blocked action. This may be because the user does not have enough energy for the attack. \n Action:${JSON.stringify(turnAction, null, 2)}`,
+		// )
 		switch (actionType) {
 			case 'PLAY_HERMIT_CARD':
 			case 'PLAY_ITEM_CARD':
 			case 'PLAY_EFFECT_CARD':
 			case 'PLAY_SINGLE_USE_CARD':
-				playCardAction(con.game, turnAction.action)
+				playCardAction(con.game, turnAction)
 				break
 			case 'SINGLE_USE_ATTACK':
 			case 'PRIMARY_ATTACK':
 			case 'SECONDARY_ATTACK':
-				attackAction(con.game, turnAction.action)
+				attackAction(con.game, turnAction)
 				break
 			case 'CHANGE_ACTIVE_HERMIT':
-				changeActiveHermitAction(con.game, turnAction.action)
+				changeActiveHermitAction(con.game, turnAction)
 				break
 			case 'APPLY_EFFECT':
 				applyEffectAction(con.game)
@@ -414,13 +415,10 @@ function handleSingleTurnAction(
 				removeEffectAction(con.game)
 				break
 			case 'PICK_REQUEST':
-				pickRequestAction(
-					con.game,
-					(turnAction.action as PickSlotActionData)?.entity,
-				)
+				pickRequestAction(con.game, (turnAction as PickSlotActionData)?.entity)
 				break
 			case 'MODAL_REQUEST':
-				modalRequestAction(con.game, turnAction?.action?.modalResult)
+				modalRequestAction(con.game, turnAction?.modalResult)
 				break
 			case 'END_TURN':
 				endTurn = true
@@ -435,7 +433,7 @@ function handleSingleTurnAction(
 				con.broadcastState()
 				break
 			case 'FORFEIT':
-				con.game.endInfo.deadPlayerEntities = [turnAction.action.player]
+				con.game.endInfo.deadPlayerEntities = [turnAction.player]
 				return 'FORFEIT'
 			default:
 				// Unknown action type, ignore it completely
@@ -479,7 +477,17 @@ function getPlayerAI(game: GameModel) {
 	)
 }
 
-function* turnActionsSaga(con: GameController, turnActionChannel: any) {
+function* turnActionsGenerator(
+	con: GameController,
+): Generator<
+	undefined,
+	'GAME_END' | undefined,
+	{type: 'startup'; data: any} | {type: 'action'; action: AnyTurnActionData}
+> {
+	let startupInfo = yield
+	assert(startupInfo.type === 'startup')
+	const me = startupInfo.data
+
 	const {opponentPlayer, currentPlayer} = con.game
 
 	let playerAISagaRunning: boolean = false
@@ -549,92 +557,33 @@ function* turnActionsSaga(con: GameController, turnActionChannel: any) {
 
 		const playerAI = getPlayerAI(con.game)
 		if (playerAI && !playerAISagaRunning) {
-			yield* fork(function* () {
-				playerAISagaRunning = true
-				yield* call(virtualPlayerActionSaga, con, playerAI)
-				playerAISagaRunning = false
-			})
+			// yield* fork(function* () {
+			// 	playerAISagaRunning = true
+			// 	yield* call(virtualPlayerActionSaga, con, playerAI)
+			// 	playerAISagaRunning = false
+			// })
 		}
 
-		const raceResult = yield* race({
-			turnAction: take(turnActionChannel),
-			timeout: delay(remainingTime + graceTime),
-		}) as any // @NOTE - need to type as any due to typed-redux-saga inferring the wrong return type for action channel
+		let timeout = setTimeout(() => {
+			me.next({type: 'TIMEOUT'})
+		}, remainingTime + graceTime)
+
+		const nextAction = yield
+		clearTimeout(timeout)
+		assert(nextAction.type === 'action')
+		const turnAction = nextAction.action
 
 		// Reset coin flips
 		currentPlayer.coinFlips = []
 		opponentPlayer.coinFlips = []
 
 		// Handle timeout
-		if (raceResult.timeout) {
-			// @TODO this works, but could be cleaned
-			const currentAttack = con.game.state.turn.currentAttack
-			let reset = false
-
-			// First check to see if the opponent had a pick request active
-			const currentPickRequest = con.game.state.pickRequests[0]
-			if (currentPickRequest) {
-				if (currentPickRequest.player === currentPlayer.entity) {
-					if (!!currentAttack) {
-						reset = true
-					}
-				} else {
-					reset = true
-				}
-			}
-
-			// Check to see if the opponent had a modal request active
-			const currentModalRequest = con.game.state.modalRequests[0]
-			if (currentModalRequest) {
-				if (currentModalRequest.player === currentPlayer.entity) {
-					if (!!currentAttack) {
-						reset = true
-					}
-				} else {
-					reset = true
-				}
-			}
-
-			if (reset) {
-				// Timeout current request and remove it
-				if (currentPickRequest) {
-					con.game.removePickRequest()
-				} else {
-					con.game.removeModalRequest()
-				}
-
-				// Reset timer to max time
-				con.game.state.timer.turnStartTime = Date.now()
-				con.game.state.timer.turnRemaining = con.game.settings.maxTurnTime
-
-				// Execute attack now if there's a current attack
-				if (!con.game.hasActiveRequests() && !!currentAttack) {
-					// There are no active requests left, and we're in the middle of an attack. Execute it now.
-					const turnAction: AttackActionData = {
-						type: attackToAttackAction[currentAttack],
-					}
-					attackAction(con.game, turnAction, false)
-				}
-
-				continue
-			}
-
-			const hasActiveHermit = con.game.components.exists(
-				CardComponent,
-				query.card.player(currentPlayer.entity),
-				query.card.slot(query.slot.active, query.slot.hermit),
-			)
-			if (hasActiveHermit) {
-				break
-			}
-
-			con.game.endInfo.victoryReason = 'timeout-without-hermits'
-			con.game.endInfo.deadPlayerEntities = [currentPlayer.entity]
-			return 'GAME_END'
+		if (turnAction.type === 'TIMEOUT') {
+			throw 'timeout'
 		}
 
 		// Run action logic
-		const result = handleSingleTurnAction(con, raceResult.turnAction)
+		const result = handleSingleTurnAction(con, turnAction)
 
 		if (result === 'END_TURN') {
 			break
@@ -646,7 +595,77 @@ function* turnActionsSaga(con: GameController, turnActionChannel: any) {
 	}
 }
 
-export function* turnSaga(con: GameController) {
+function handleTurnTimeout(con: GameController) {
+	// @TODO this works, but could be cleaned
+	const currentAttack = con.game.state.turn.currentAttack
+	const currentPlayer = con.game.currentPlayer
+	let reset = false
+
+	// First check to see if the opponent had a pick request active
+	const currentPickRequest = con.game.state.pickRequests[0]
+	if (currentPickRequest) {
+		if (currentPickRequest.player === currentPlayer.entity) {
+			if (!!currentAttack) {
+				reset = true
+			}
+		} else {
+			reset = true
+		}
+	}
+
+	// Check to see if the opponent had a modal request active
+	const currentModalRequest = con.game.state.modalRequests[0]
+	if (currentModalRequest) {
+		if (currentModalRequest.player === currentPlayer.entity) {
+			if (!!currentAttack) {
+				reset = true
+			}
+		} else {
+			reset = true
+		}
+	}
+
+	if (reset) {
+		// Timeout current request and remove it
+		if (currentPickRequest) {
+			con.game.removePickRequest()
+		} else {
+			con.game.removeModalRequest()
+		}
+
+		// Reset timer to max time
+		con.game.state.timer.turnStartTime = Date.now()
+		con.game.state.timer.turnRemaining = con.game.settings.maxTurnTime
+
+		// Execute attack now if there's a current attack
+		if (!con.game.hasActiveRequests() && !!currentAttack) {
+			// There are no active requests left, and we're in the middle of an attack. Execute it now.
+			const turnAction: AttackActionData = {
+				type: attackToAttackAction[currentAttack],
+			}
+			attackAction(con.game, turnAction, false)
+		}
+
+		return 'CONTINUE'
+	}
+
+	const hasActiveHermit = con.game.components.exists(
+		CardComponent,
+		query.card.player(currentPlayer.entity),
+		query.card.slot(query.slot.active, query.slot.hermit),
+	)
+	if (hasActiveHermit) {
+		return 'STOP'
+	}
+
+	con.game.endInfo.victoryReason = 'timeout-without-hermits'
+	con.game.endInfo.deadPlayerEntities = [currentPlayer.entity]
+	return 'GAME_END'
+}
+
+export function* turnSaga(
+	con: GameController,
+): Generator<undefined, 'GAME_END' | undefined, AnyTurnActionData> {
 	const {currentPlayer, opponentPlayer} = con.game
 
 	// Reset turn state
@@ -671,7 +690,7 @@ export function* turnSaga(con: GameController) {
 
 	// Check for dead hermits on turn start
 	if (con.game.state.turn.turnNumber > 2) {
-		const turnStartDeadPlayers = yield* call(checkHermitHealth, con.game)
+		const turnStartDeadPlayers = checkHermitHealth(con.game)
 		if (turnStartDeadPlayers.length) {
 			con.game.endInfo.victoryReason = turnStartDeadPlayers.every(
 				(deadPlayer) => deadPlayer.lives <= 0,
@@ -685,37 +704,18 @@ export function* turnSaga(con: GameController) {
 		}
 	}
 
-	const turnActionChannel = yield* actionChannel(
-		[
-			...['PICK_REQUEST', 'MODAL_REQUEST', 'FORFEIT'].map((type) =>
-				playerAction(type, opponentPlayer.entity),
-			),
-			...[
-				'PLAY_HERMIT_CARD',
-				'PLAY_ITEM_CARD',
-				'PLAY_EFFECT_CARD',
-				'PLAY_SINGLE_USE_CARD',
-				'PICK_REQUEST',
-				'MODAL_REQUEST',
-				'CHANGE_ACTIVE_HERMIT',
-				'APPLY_EFFECT',
-				'REMOVE_EFFECT',
-				'SINGLE_USE_ATTACK',
-				'PRIMARY_ATTACK',
-				'SECONDARY_ATTACK',
-				'END_TURN',
-				'DELAY',
-				'FORFEIT',
-			].map((type) => playerAction(type, currentPlayer.entity)),
-		],
-		buffers.dropping(10),
-	)
-
 	let result
 	try {
-		result = yield* call(turnActionsSaga, con, turnActionChannel)
-	} finally {
-		turnActionChannel.close()
+		let turnActionGen = turnActionsGenerator(con)
+
+		while (true) {
+			let nextAction = yield
+			turnActionGen.next({type: 'action', action: nextAction})
+		}
+	} catch (e) {
+		if (e === 'timeout') {
+			handleTurnTimeout(con)
+		}
 	}
 
 	if (result === 'GAME_END') return 'GAME_END'
@@ -740,10 +740,7 @@ export function* turnSaga(con: GameController) {
 	}
 	con.game.state.modalRequests = []
 
-	const deadPlayers: PlayerComponent[] = yield* call(
-		checkHermitHealth,
-		con.game,
-	)
+	const deadPlayers: PlayerComponent[] = checkHermitHealth(con.game)
 	if (deadPlayers.length) {
 		if (deadPlayers.every((player) => player.lives <= 0)) {
 			con.game.endInfo.victoryReason = 'lives'
@@ -756,7 +753,7 @@ export function* turnSaga(con: GameController) {
 		return 'GAME_END'
 	}
 
-	const deckedOutPlayers: PlayerEntity[] = yield* call(checkDeckedOut, con.game)
+	const deckedOutPlayers: PlayerEntity[] = checkDeckedOut(con.game)
 	if (deckedOutPlayers.length) {
 		con.game.endInfo.victoryReason = 'decked-out'
 		con.game.endInfo.deadPlayerEntities = deckedOutPlayers
@@ -781,7 +778,7 @@ export function* turnSaga(con: GameController) {
 		}
 	}
 
-	return 'DONE'
+	return
 }
 
 function checkDeckedOut(game: GameModel) {
@@ -804,7 +801,7 @@ function* gameSaga(con: GameController) {
 		)
 	while (true) {
 		con.game.state.turn.turnNumber++
-		const result = yield* call(turnSaga, con)
+		const result = yield* turnSaga(con)
 		if (result === 'GAME_END') break
 	}
 	con.game.outcome = figureOutGameResult(con.game)

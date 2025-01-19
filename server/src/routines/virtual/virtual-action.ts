@@ -13,22 +13,22 @@ function getRandomDelay() {
 	return Math.random() * 500 + 500
 }
 
-export default function* virtualPlayerActionSaga(
+export default function virtualPlayerActionSaga(
 	con: GameController,
 	component: AIComponent,
 ) {
 	const coinFlips = con.game.currentPlayer.coinFlips
-	yield* delay(
-		coinFlips.reduce((r, flip) => r + flip.delay, 0) + getRandomDelay(),
-	)
+	// yield* delay(
+	// 	coinFlips.reduce((r, flip) => r + flip.delay, 0) + getRandomDelay(),
+	// )
 	try {
 		const action = component.getNextTurnAction()
-		yield* put({
-			type: clientMessages.TURN_ACTION,
-			payload: {action, playerEntity: component.playerEntity},
-			action: action,
-			playerEntity: component.playerEntity,
-		})
+		// yield* put({
+		// 	type: clientMessages.TURN_ACTION,
+		// 	payload: {action, playerEntity: component.playerEntity},
+		// 	action: action,
+		// 	playerEntity: component.playerEntity,
+		// })
 	} catch (e) {
 		con.chat.push({
 			createdAt: Date.now(),

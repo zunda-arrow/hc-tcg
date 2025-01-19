@@ -66,6 +66,7 @@ export type OtherTurnActions = {
 		| 'PICK_REQUEST'
 		| 'WAIT_FOR_TURN'
 		| 'WAIT_FOR_OPPONENT_ACTION'
+		| 'TIMEOUT'
 }
 
 export type AnyTurnActionData =
