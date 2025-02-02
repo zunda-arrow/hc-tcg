@@ -293,16 +293,17 @@ function getNextTurnAction(
 			let outputRight = []
 
 			while (outputLeft.length + outputRight.length < cards.length) {
-				const card: CardEntity =
-					cards[outputLeft.length + outputRight.length - 1]
+				let rng = game.rng()
+				const card: CardEntity = cards[outputLeft.length + outputRight.length]
 				if (
-					modal.leftAreaMax === null ||
-					outputLeft.length < modal.leftAreaMax
+					rng < 0.5 &&
+					(modal.leftAreaMax === null || outputLeft.length < modal.leftAreaMax)
 				) {
 					outputLeft.push(card)
 				} else if (
-					modal.rightAreaMax === null ||
-					outputRight.length < modal.rightAreaMax
+					rng >= 0.5 &&
+					(modal.rightAreaMax === null ||
+						outputRight.length < modal.rightAreaMax)
 				) {
 					outputRight.push(card)
 				}
