@@ -5,7 +5,7 @@ import {
 } from 'common/socket-messages/client-messages'
 import {serverMessages} from 'common/socket-messages/server-messages'
 import {LocalGameState} from 'common/types/game-state'
-import {GameController} from 'game-controller'
+import {ServerGameController} from 'game-controller'
 import {LocalMessage, LocalMessageTable, localMessages} from 'messages'
 import {getGame} from 'selectors'
 import {delay, put, race, select, take} from 'typed-redux-saga'
@@ -16,7 +16,7 @@ import {broadcast} from '../utils/comm'
 const KEEP_PLAYER_AFTER_DISCONNECT_MS = 1000 * 60
 
 function getLocalGameStateForPlayer(
-	controller: GameController,
+	controller: ServerGameController,
 	playerId: PlayerId,
 ): LocalGameState | undefined {
 	const player = controller.players[playerId]

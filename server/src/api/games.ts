@@ -1,5 +1,5 @@
 import {serverMessages} from 'common/socket-messages/server-messages'
-import {GameController} from 'game-controller'
+import {ServerGameController} from 'game-controller'
 import root from 'serverRoot'
 import {broadcast} from 'utils/comm'
 
@@ -25,7 +25,7 @@ function cancelGame(game: {
 	if (game.gameCode) delete root.privateQueue[game.gameCode]
 }
 
-function getPlayers(con: GameController) {
+function getPlayers(con: ServerGameController) {
 	return con.viewers.flatMap((viewer) => {
 		if (viewer.spectator) return []
 		let player = viewer.playerOnLeft

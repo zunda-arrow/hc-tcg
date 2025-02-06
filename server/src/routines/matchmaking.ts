@@ -18,7 +18,7 @@ import {formatText} from 'common/utils/formatting'
 import {OpponentDefs} from 'common/utils/state-gen'
 import {validateDeck} from 'common/utils/validation'
 import {addGame, getDeck} from 'db/db-reciever'
-import {GameController} from 'game-controller'
+import {ServerGameController} from 'game-controller'
 import {LocalMessageTable, localMessages} from 'messages'
 import {
 	all,
@@ -34,8 +34,8 @@ import {safeCall} from 'utils'
 import root from '../serverRoot'
 import {broadcast} from '../utils/comm'
 import {getLocalGameState} from '../utils/state-gen'
-import gameSaga, {getTimerForSeconds} from './game'
-import ExBossAI from './virtual/exboss-ai'
+import gameSaga, {getTimerForSeconds} from 'common/game-saga'
+import ExBossAI from 'common/virtual/exboss-ai'
 
 function setupGame(
 	player1: PlayerModel,
@@ -45,8 +45,8 @@ function setupGame(
 	gameCode?: string,
 	spectatorCode?: string,
 	apiSecret?: string,
-): GameController {
-	let con = new GameController(
+): ServerGameController {
+	let con = new ServerGameController(
 		{
 			model: player1,
 			deck: player1Deck.cards.map((card) => card.props.numericId),
@@ -76,7 +76,7 @@ function setupGame(
 	return con
 }
 
-function* gameManager(con: GameController) {
+function* gameManager(con: ServerGameController) {
 	// @TODO this one method needs cleanup still
 	try {
 		const viewers = con.viewers
@@ -395,8 +395,8 @@ function setupSolitareGame(
 	player: PlayerModel,
 	playerDeck: Deck,
 	opponent: OpponentDefs,
-): GameController {
-	const con = new GameController(
+): ServerGameController {
+	const con = new ServerGameController(
 		{
 			model: player,
 			deck: playerDeck.cards.map((card) => card.props.numericId),

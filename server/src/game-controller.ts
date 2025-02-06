@@ -13,6 +13,13 @@ import {CurrentCoinFlip, Message} from 'common/types/game-state'
 import {PlayerSetupDefs} from 'common/utils/state-gen'
 import {broadcast} from './utils/comm'
 import {getLocalGameState} from './utils/state-gen'
+import {GameController} from 'common/game-controller'
+
+type GameViewerProps = {
+	spectator: boolean
+	playerOnLeft: PlayerEntity
+	player: PlayerModel
+}
 
 export type GameControllerProps = {
 	gameCode?: string
@@ -21,12 +28,6 @@ export type GameControllerProps = {
 	randomizeOrder?: boolean
 	randomSeed?: any
 	settings?: GameSettings
-}
-
-type GameViewerProps = {
-	spectator: boolean
-	playerOnLeft: PlayerEntity
-	player: PlayerModel
 }
 
 export class GameViewer {
@@ -54,7 +55,7 @@ export class GameViewer {
 }
 
 /** An object that contains the HC TCG game and infromation related to the game, such as chat messages */
-export class GameController {
+export class ServerGameController implements GameController {
 	createdTime: number
 	id: string
 	gameCode: string | null
@@ -117,7 +118,7 @@ export class GameController {
 		)
 	}
 
-	private async publishBattleLog(logs: Array<Message>, timeout: number) {
+	async publishBattleLog(logs: Array<Message>, delay: number) {
 		// We skip waiting for the logs to send if there are no players. This is because
 		// the coin flip delay confuses jest. Additionally we don't want to wait longer
 		// than what is needed in tests.
@@ -125,7 +126,7 @@ export class GameController {
 			return
 		}
 
-		await new Promise((e) => setTimeout(e, timeout))
+		await new Promise((e) => setTimeout(e, delay))
 
 		this.chat.push(...logs)
 		this.chatUpdate()

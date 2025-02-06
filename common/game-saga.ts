@@ -1,30 +1,30 @@
-import {SingleUse} from 'common/cards/types'
+import {SingleUse} from './cards/types'
 import {
 	CardComponent,
 	DiscardSlotComponent,
 	HandSlotComponent,
 	PlayerComponent,
 	SlotComponent,
-} from 'common/components'
-import {AIComponent} from 'common/components/ai-component'
-import query from 'common/components/query'
-import {PlayerEntity} from 'common/entities'
-import {GameModel} from 'common/models/game-model'
-import {TypeT} from 'common/types/cards'
-import {GameOutcome, TurnAction, TurnActions} from 'common/types/game-state'
+} from './components'
+import {AIComponent} from './components/ai-component'
+import query from './components/query'
+import {PlayerEntity} from './entities'
+import {GameModel} from './models/game-model'
+import {TypeT} from './types/cards'
+import {GameOutcome, TurnAction, TurnActions} from './types/game-state'
 import {
+	AnyTurnActionData,
 	AttackActionData,
 	PickSlotActionData,
 	attackToAttackAction,
-} from 'common/types/turn-action-data'
-import {hasEnoughEnergy} from 'common/utils/attacks'
+} from './types/turn-action-data'
+import {hasEnoughEnergy} from './utils/attacks'
 import {buffers} from 'redux-saga'
 import {actionChannel, call, delay, fork, race, take} from 'typed-redux-saga'
-import {printBoardState, printHooksState} from '../utils'
+// import {printBoardState, printHooksState} from '../utils'
 
 import assert from 'assert'
-import {GameController} from 'game-controller'
-import {LocalMessage, LocalMessageTable, localMessages} from '../messages'
+import {GameController} from './game-controller-abc'
 import {
 	applyEffectAction,
 	attackAction,
@@ -35,10 +35,27 @@ import {
 	removeEffectAction,
 } from './turn-actions'
 import {virtualPlayerActionSaga} from './virtual'
+import {Message, messages, MessageTable} from './redux-messages'
 
 ////////////////////////////////////////
 // @TODO sort this whole thing out properly
 /////////////////////////////////////////
+
+export const gameMessages = messages('gameMessage', {
+	TURN_ACTION: null,
+})
+
+export type GameMessages = [
+	{
+		type: typeof gameMessages.TURN_ACTION
+		action: AnyTurnActionData
+		playerEntity: PlayerEntity
+	},
+]
+
+export type GameMessage = Message<GameMessages>
+
+export type GameMessageTable = MessageTable<GameMessages>
 
 export const getTimerForSeconds = (
 	game: GameModel,
@@ -283,9 +300,9 @@ function getAvailableActions(
 
 function playerAction(actionType: string, playerEntity: PlayerEntity) {
 	return (actionAny: any) => {
-		const action = actionAny as LocalMessage
+		const action = actionAny as GameMessage
 		return (
-			action.type === localMessages.GAME_TURN_ACTION &&
+			action.type === gameMessages.TURN_ACTION &&
 			'playerEntity' in action &&
 			'action' in action &&
 			action.action.type === actionType &&
@@ -373,7 +390,7 @@ function checkHermitHealth(game: GameModel) {
 
 function handleSingleTurnAction(
 	con: GameController,
-	turnAction: LocalMessageTable[typeof localMessages.GAME_TURN_ACTION],
+	turnAction: GameMessageTable[typeof gameMessages.TURN_ACTION],
 ) {
 	const actionType = turnAction.action.type
 
