@@ -1,14 +1,14 @@
 import {Card} from 'common/cards/types'
 import {COINS} from 'common/coins'
 import {AIComponent} from 'common/components/ai-component'
+import {GameController} from 'common/game-controller'
+import gameSaga, {figureOutGameResult} from 'common/game-saga'
 import {GameModel, GameSettings} from 'common/models/game-model'
 import {CurrentCoinFlip, Message} from 'common/types/game-state'
 import {VirtualAI} from 'common/types/virtual-ai'
 import {applyMiddleware, createStore} from 'redux'
 import createSagaMiddleware from 'redux-saga'
-import gameSaga, {figureOutGameResult} from 'common/game-saga'
 import {call} from 'typed-redux-saga'
-import {GameController} from 'common/game-controller'
 
 class FuzzyGameController implements GameController {
 	game: GameModel

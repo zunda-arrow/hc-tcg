@@ -1,6 +1,5 @@
 import {buffers} from 'redux-saga'
 import {actionChannel, call, delay, fork, race, take} from 'typed-redux-saga'
-import {printBoardState, printHooksState} from './game-utils'
 import {SingleUse} from './cards/types'
 import {
 	CardComponent,
@@ -12,6 +11,7 @@ import {
 import {AIComponent} from './components/ai-component'
 import query from './components/query'
 import {PlayerEntity} from './entities'
+import {printBoardState, printHooksState} from './game-utils'
 import {GameModel} from './models/game-model'
 import {TypeT} from './types/cards'
 import {GameOutcome, TurnAction, TurnActions} from './types/game-state'

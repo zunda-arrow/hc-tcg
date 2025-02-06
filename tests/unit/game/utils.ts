@@ -13,6 +13,7 @@ import {
 } from 'common/components'
 import query, {ComponentQuery} from 'common/components/query'
 import {PlayerEntity} from 'common/entities'
+import gameSaga, {figureOutGameResult} from 'common/game-saga'
 import {GameModel, GameSettings} from 'common/models/game-model'
 import {SlotTypeT} from 'common/types/cards'
 import {GameOutcome} from 'common/types/game-state'
@@ -26,7 +27,6 @@ import createSagaMiddleware from 'redux-saga'
 import {ServerGameController} from 'server/game-controller'
 import {LocalMessage, localMessages} from 'server/messages'
 import {getLocalCard} from 'server/utils/state-gen'
-import gameSaga, { figureOutGameResult } from 'common/game-saga'
 import {call, put, race} from 'typed-redux-saga'
 
 function getTestPlayer(playerName: string, deck: Array<Card>) {
