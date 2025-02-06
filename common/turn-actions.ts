@@ -1,6 +1,7 @@
 import assert from 'assert'
 import {CardComponent, SlotComponent} from './components'
 import query from './components/query'
+import {getLocalModalData} from './copy-game-state-for-client'
 import {SlotEntity} from './entities'
 import {AttackModel} from './models/attack-model'
 import {GameModel} from './models/game-model'
@@ -20,7 +21,6 @@ import {
 } from './types/turn-action-data'
 import {executeAttacks} from './utils/attacks'
 import {applySingleUse} from './utils/board'
-import {getLocalModalData} from '../utils/state-gen'
 
 function getAttack(
 	game: GameModel,
