@@ -23,10 +23,10 @@ import {
 } from 'common/types/turn-action-data'
 import {applyMiddleware, createStore} from 'redux'
 import createSagaMiddleware from 'redux-saga'
-import {GameController} from 'server/game-controller'
+import {ServerGameController} from 'server/game-controller'
 import {LocalMessage, localMessages} from 'server/messages'
-import gameSaga, {figureOutGameResult} from 'server/routines/game'
 import {getLocalCard} from 'server/utils/state-gen'
+import gameSaga, { figureOutGameResult } from 'common/game-saga'
 import {call, put, race} from 'typed-redux-saga'
 
 function getTestPlayer(playerName: string, deck: Array<Card>) {
@@ -278,7 +278,7 @@ export function testGame(
 	},
 	settings: Partial<GameSettings> = {},
 ) {
-	let controller = new GameController(
+	let controller = new ServerGameController(
 		getTestPlayer('playerOne', options.playerOneDeck),
 		getTestPlayer('playerTwo', options.playerTwoDeck),
 		{
@@ -335,7 +335,7 @@ export function testBossFight(
 	},
 	settings?: Partial<GameSettings>,
 ) {
-	let controller = new GameController(
+	let controller = new ServerGameController(
 		getTestPlayer('playerOne', options.playerDeck),
 		{
 			model: {

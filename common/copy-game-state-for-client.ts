@@ -1,38 +1,37 @@
-import JoeHillsRare from 'common/cards/hermits/joehills-rare'
-import {Card} from 'common/cards/types'
+import JoeHillsRare from './cards/hermits/joehills-rare'
+import {Card} from './cards/types'
 import {
 	CardComponent,
 	PlayerComponent,
 	RowComponent,
 	SlotComponent,
 	StatusEffectComponent,
-} from 'common/components'
-import query from 'common/components/query'
-import {PlayerEntity} from 'common/entities'
-import {GameModel} from 'common/models/game-model'
+} from './components'
+import query from './components/query'
+import {PlayerEntity} from './entities'
+import {GameModel} from './models/game-model'
 import {
 	MultiturnPrimaryAttackDisabledEffect,
 	MultiturnSecondaryAttackDisabledEffect,
-} from 'common/status-effects/multiturn-attack-disabled'
+} from './status-effects/multiturn-attack-disabled'
 import {
 	PrimaryAttackDisabledEffect,
 	SecondaryAttackDisabledEffect,
-} from 'common/status-effects/singleturn-attack-disabled'
-import TimeSkipDisabledEffect from 'common/status-effects/time-skip-disabled'
+} from './status-effects/singleturn-attack-disabled'
+import TimeSkipDisabledEffect from './status-effects/time-skip-disabled'
 import {
 	CurrentCoinFlip,
 	LocalCurrentCoinFlip,
 	LocalGameState,
 	LocalPlayerState,
-} from 'common/types/game-state'
-import {ModalData} from 'common/types/modal-requests'
+} from './types/game-state'
+import {ModalData} from './types/modal-requests'
 import {
 	LocalCardInstance,
 	LocalModalData,
 	LocalStatusEffectInstance,
 	WithoutFunctions,
-} from 'common/types/server-requests'
-import {GameViewer} from '../game-controller'
+} from './types/server-requests'
 
 ////////////////////////////////////////
 // @TODO sort this whole thing out properly
@@ -42,6 +41,19 @@ import {GameViewer} from '../game-controller'
 // On 07/17/23, This still has not been sorted out properly. I think I might have
 // even made it worse.
 // Sincerely, Lunarmagpie
+
+export type Viewer = {
+	spectator: boolean
+	playerOnLeftEntity: PlayerEntity
+}
+
+function getViewerPlayerOnLeft(game: GameModel, viewer: Viewer) {
+	return game.components.getOrError(viewer.playerOnLeftEntity)
+}
+
+function getViewerPlayerOnRight(game: GameModel, viewer: Viewer) {
+	return game.components.getOrError(viewer.playerOnLeftEntity).opponentPlayer
+}
 
 function getLocalStatusEffect(effect: StatusEffectComponent) {
 	if (!effect.target) {
@@ -266,32 +278,29 @@ function getLocalPlayerState(
 
 export function getLocalGameState(
 	game: GameModel,
-	viewer: GameViewer,
+	viewer: Viewer,
 ): LocalGameState {
 	const playerState = game.components.find(
 		PlayerComponent,
-		(_game, player) => player.entity == viewer.playerOnLeft.entity,
+		(_game, player) => player.entity == playerOnLeft.entity,
 	)
 
 	if (!playerState)
 		throw new Error('Player should be added to ECS before fetching local state')
 
+	let playerOnLeft = getViewerPlayerOnLeft(game, viewer)
+	let playerOnRight = getViewerPlayerOnRight(game, viewer)
 	const opponentState = playerState.opponentPlayer
 
 	let isCurrentPlayer =
-		!viewer.spectator &&
-		viewer.playerOnLeft.entity === game.currentPlayer.entity
+		!viewer.spectator && playerOnLeft.entity === game.currentPlayer.entity
 
 	const turnState = game.state.turn
 
 	// convert player states
 	const players: Record<PlayerEntity, LocalPlayerState> = {}
-	players[viewer.playerOnLeft.entity] = getLocalPlayerState(
-		game,
-		playerState,
-		viewer,
-	)
-	players[viewer.playerOnRight.entity] = getLocalPlayerState(
+	players[playerOnLeft.entity] = getLocalPlayerState(game, playerState, viewer)
+	players[playerOnRight.entity] = getLocalPlayerState(
 		game,
 		opponentState,
 		viewer,
@@ -309,10 +318,10 @@ export function getLocalGameState(
 		? null
 		: game.state.modalRequests[0]
 
-	if (currentModalRequest?.player === viewer.playerOnLeft.entity) {
+	if (currentModalRequest?.player === playerOnLeft.entity) {
 		// We must send modal requests first, to stop pick requests from overwriting them.
 		currentModalData = getLocalModalData(game, currentModalRequest.modal)
-	} else if (currentPickRequest?.player === viewer.playerOnLeft.entity) {
+	} else if (currentPickRequest?.player === playerOnLeft.entity) {
 		// Once there are no modal requests, send pick requests
 		currentPickMessage = currentPickRequest.message
 		// Add the card name before the request
@@ -321,13 +330,13 @@ export function getLocalGameState(
 			currentPickMessage = `${pickRequestCreator.props.name}: ${currentPickMessage}`
 		}
 		// We also want to highlight the slots for the player that must select a slot
-		if (currentPickRequest.player == viewer.playerOnLeft.entity) {
+		if (currentPickRequest.player == playerOnLeft.entity) {
 			playerState.pickableSlots = game.getPickableSlots(
 				currentPickRequest.canPick,
 			)
 		}
 		// We also want to highlight the slots for the player that must select a slot
-		if (currentPickRequest.player == viewer.playerOnLeft.entity) {
+		if (currentPickRequest.player == playerOnLeft.entity) {
 			playerState.pickableSlots = game.getPickableSlots(
 				currentPickRequest.canPick,
 			)
@@ -397,9 +406,9 @@ export function getLocalGameState(
 					.map((card) => getLocalCard(game, card)),
 
 		// The entity of the player on the left of the screen
-		playerEntity: players[viewer.playerOnLeft.entity].entity,
+		playerEntity: players[playerOnLeft.entity].entity,
 		// The entity for the player on the the right of the screen
-		opponentPlayerEntity: players[viewer.playerOnRight.entity].entity,
+		opponentPlayerEntity: players[playerOnRight.entity].entity,
 
 		currentCardsCanBePlacedIn: playerState
 			.getCardsCanBePlacedIn()
@@ -417,4 +426,3 @@ export function getLocalGameState(
 
 	return localGameState
 }
-

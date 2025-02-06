@@ -7,6 +7,7 @@ import {
 } from 'common/components'
 import {AIComponent} from 'common/components/ai-component'
 import query from 'common/components/query'
+import gameSaga, {getTimerForSeconds} from 'common/game-saga'
 import {PlayerId, PlayerModel} from 'common/models/player-model'
 import {
 	RecievedClientMessage,
@@ -17,6 +18,7 @@ import {Deck} from 'common/types/deck'
 import {formatText} from 'common/utils/formatting'
 import {OpponentDefs} from 'common/utils/state-gen'
 import {validateDeck} from 'common/utils/validation'
+import ExBossAI from 'common/virtual/exboss-ai'
 import {addGame, getDeck} from 'db/db-reciever'
 import {ServerGameController} from 'game-controller'
 import {LocalMessageTable, localMessages} from 'messages'
@@ -34,8 +36,6 @@ import {safeCall} from 'utils'
 import root from '../serverRoot'
 import {broadcast} from '../utils/comm'
 import {getLocalGameState} from '../utils/state-gen'
-import gameSaga, {getTimerForSeconds} from 'common/game-saga'
-import ExBossAI from 'common/virtual/exboss-ai'
 
 function setupGame(
 	player1: PlayerModel,

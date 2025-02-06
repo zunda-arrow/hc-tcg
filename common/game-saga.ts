@@ -1,3 +1,6 @@
+import {buffers} from 'redux-saga'
+import {actionChannel, call, delay, fork, race, take} from 'typed-redux-saga'
+import {printBoardState, printHooksState} from './game-utils'
 import {SingleUse} from './cards/types'
 import {
 	CardComponent,
@@ -19,12 +22,10 @@ import {
 	attackToAttackAction,
 } from './types/turn-action-data'
 import {hasEnoughEnergy} from './utils/attacks'
-import {buffers} from 'redux-saga'
-import {actionChannel, call, delay, fork, race, take} from 'typed-redux-saga'
-// import {printBoardState, printHooksState} from '../utils'
 
 import assert from 'assert'
 import {GameController} from './game-controller-abc'
+import {Message, MessageTable, messages} from './redux-messages'
 import {
 	applyEffectAction,
 	attackAction,
@@ -35,7 +36,6 @@ import {
 	removeEffectAction,
 } from './turn-actions'
 import {virtualPlayerActionSaga} from './virtual'
-import {Message, messages, MessageTable} from './redux-messages'
 
 ////////////////////////////////////////
 // @TODO sort this whole thing out properly

@@ -1,4 +1,5 @@
 import {PlayerEntity} from 'common/entities'
+import {GameController} from 'common/game-controller'
 import {
 	GameModel,
 	GameSettings,
@@ -13,7 +14,6 @@ import {CurrentCoinFlip, Message} from 'common/types/game-state'
 import {PlayerSetupDefs} from 'common/utils/state-gen'
 import {broadcast} from './utils/comm'
 import {getLocalGameState} from './utils/state-gen'
-import {GameController} from 'common/game-controller'
 
 type GameViewerProps = {
 	spectator: boolean
@@ -43,14 +43,6 @@ export class GameViewer {
 		this.spectator = props.spectator
 		this.playerOnLeftEntity = props.playerOnLeft
 		this.player = props.player
-	}
-
-	get playerOnLeft() {
-		return this.game.components.getOrError(this.playerOnLeftEntity)
-	}
-
-	get playerOnRight() {
-		return this.playerOnLeft.opponentPlayer
 	}
 }
 
