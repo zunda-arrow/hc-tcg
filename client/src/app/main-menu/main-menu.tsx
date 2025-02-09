@@ -87,9 +87,9 @@ function MainMenu({setMenuSection}: Props) {
 	return (
 		<>
 			{!latestUpdateView ||
-			parseInt(updates['timestamps'] ? updates['timestamps'][0] : '0') >
-				parseInt(latestUpdateView) ? (
-				debugOptions.showUpdatesModal &&
+			(parseInt(updates['timestamps'] ? updates['timestamps'][0] : '0') >
+				parseInt(latestUpdateView) &&
+				debugOptions.showUpdatesModal) ? (
 				updatesOpen && <UpdatesModal onClose={() => setUpdatesOpen(false)} />
 			) : (
 				<></>
