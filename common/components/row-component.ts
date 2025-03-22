@@ -10,6 +10,7 @@ import {BoardSlotComponent, SlotComponent} from './slot-component'
 
 export class RowComponent {
 	public static table = 'rows'
+	public static tableNumber = 4
 
 	readonly game: GameModel
 	readonly entity: RowEntity

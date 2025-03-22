@@ -2,6 +2,7 @@ import assert from 'node:assert'
 import {ComponentQuery} from '../components/query'
 import {Entity, newEntity} from '../entities'
 import {GameModel} from '../models/game-model'
+import {createBrotliDecompress} from 'node:zlib'
 
 export type Component = {
 	entity: Entity<any>
@@ -18,29 +19,29 @@ function callPredicate(game: GameModel, value: any) {
  */
 export default class ComponentTable {
 	private game: GameModel
-	private tables: Map<string, Map<Entity<any>, Component>>
-	private tableMap: Map<Entity<any>, string>
+	private components: Array<Component>
+	private tables: Array<Array<Entity<any> | undefined>>
+	private tableMap: Array<number>
 
 	constructor(game: GameModel) {
 		this.game = game
-		this.tables = new Map()
-		this.tableMap = new Map()
+		this.components = ["TMP"]
+		/* Max of 20 component types */
+		this.tables = new Array(20)
+		this.tableMap = []
 	}
 
 	/** Get a specific entity by the ID */
 	public get<T>(id: Entity<T> | null): T | null {
-		if (!id) return null
-		let table = this.tableMap.get(id)
-		assert(table, 'there should be a table')
-		// @ts-ignore
-		return this.tables.get(table).get(id) || null
+		if (id === null) return null
+		return this.components[id] as T | null
 	}
 
 	/** Get a specific entity by the ID. If the entity does not exist, raise an error */
 	public getOrError<T>(id: Entity<T>): T {
 		const component = this.get(id)
 		if (!component) {
-			throw new Error(`Could not find component with ID \`${id}\ in ECS`)
+			throw new Error(`Could not find component with ID \`${id}\` in ECS`)
 		}
 		// @ts-ignore
 		return component
@@ -50,9 +51,9 @@ export default class ComponentTable {
 	 * mark the element as invalid instead.
 	 */
 	public delete(id: Entity<any>) {
-		let table = this.tableMap.get(id)
+		let table = this.tableMap[id]
 		if (!table) return
-		this.tables.get(table)?.delete(id)
+		this.tables[table][id] = undefined
 	}
 
 	/** Add a entity linked to a component and return the ID of the value */
@@ -64,16 +65,21 @@ export default class ComponentTable {
 			(newValue as any).table,
 			`Found component type \`${newValue.name}\` has undefined table`,
 		)
+
 		const value = new newValue(
 			this.game,
-			newEntity<T['entity']>((newValue as any).table, this.game),
+			this.components.length as Entity<T>,
 			...args,
 		)
-		if (this.tables.get((newValue as any).table) === undefined) {
-			this.tables.set((newValue as any).table, new Map())
+
+		this.components.push(value)
+
+		if (this.tables[newValue.tableNumber] === undefined) {
+			this.tables[newValue.tableNumber] = []
 		}
-		this.tableMap.set(value.entity, (newValue as any).table)
-		this.tables.get((newValue as any).table)?.set(value.entity, value)
+
+		this.tables[newValue.tableNumber].push(value.entity)
+
 		return value
 	}
 
@@ -88,18 +94,18 @@ export default class ComponentTable {
 		type: ComponentClass<T>,
 		...predicates: Array<ComponentQuery<T>>
 	): Array<T> {
-		// This method is so crazy because it makes the code run a tiny bit faster
-		assert(
-			(type as any).table,
-			`Found component type \`${type.name}\` has undefined table`,
-		)
-		let out = new Array()
-		for (const value of this.tables.get((type as any).table)?.values() || []) {
+		let out = []
+
+		let table = this.tables[type.tableNumber] || []
+
+		for (const entity of table) {
+			if (entity === undefined) continue
+			let component = this.components[entity]
 			if (
-				value instanceof type &&
-				predicates.every(callPredicate(this.game, value))
+				component instanceof type &&
+				predicates.every(callPredicate(this.game, component))
 			) {
-				out.push(value)
+				out.push(component)
 			}
 		}
 
@@ -121,18 +127,19 @@ export default class ComponentTable {
 		type: ComponentClass<T>,
 		...predicates: Array<ComponentQuery<T>>
 	): T | null {
-		assert(
-			(type as any).table,
-			`Found component type \`${type.name}\` has undefined table`,
-		)
-		for (const value of this.tables.get((type as any).table)?.values() || []) {
+		let table = this.tables[type.tableNumber] || []
+
+		for (const entity of table) {
+			if (entity === undefined) continue
+			let component = this.components[entity]
 			if (
-				value instanceof type &&
-				predicates.every(callPredicate(this.game, value))
+				component instanceof type &&
+				predicates.every(callPredicate(this.game, component))
 			) {
-				return value
+				return component
 			}
 		}
+
 		return null
 	}
 

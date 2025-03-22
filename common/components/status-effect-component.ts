@@ -17,6 +17,7 @@ export class StatusEffectComponent<
 	StatusEffectType extends StatusEffect<TargetT> = StatusEffect<TargetT>,
 > {
 	public static table = 'effects'
+	public static tableNumber = 3
 
 	readonly game: GameModel
 	readonly entity: StatusEffectEntity

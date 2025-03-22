@@ -14,7 +14,7 @@ import {GameModel} from './models/game-model'
  *  be send to the client and should be used for that purpose.
  * The <Wrapping> generic is used by the `ComponentTable`'s get function to return the correct type.
  */
-export type Entity<Wrapping> = string & {
+export type Entity<Wrapping> = number & {
 	// Due to how typescript works, we need `Wrapping` to show up in the type for type inference.
 	__entity_type_do_not_use_ever_the_program_will_crash: Wrapping
 }
@@ -31,7 +31,5 @@ export type AchievementEntity = Entity<AchievementComponent>
 /** Create a new entity */
 export function newEntity<T>(entityName: string, game?: GameModel): Entity<T> {
 	const randomNumber = game ? game.nextEntity() : Math.random()
-	return `${entityName}-${game ? game.id : 'no-game'}-${Math.floor(
-		randomNumber * Number.MAX_SAFE_INTEGER,
-	).toString(16)}` as Entity<T>
+	return randomNumber as Entity<T>
 }

@@ -13,6 +13,7 @@ import type {StatusEffectComponent} from './status-effect-component'
  */
 export class ObserverComponent {
 	public static table = 'observers'
+	public static tableNumber = 5
 
 	readonly game: GameModel
 	readonly entity: ObserverEntity

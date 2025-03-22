@@ -32,6 +32,7 @@ export type PlayerDefs = {
 
 export class PlayerComponent {
 	public static table = 'players'
+	public static tableNumber = 2
 
 	readonly game: GameModel
 	readonly entity: PlayerEntity

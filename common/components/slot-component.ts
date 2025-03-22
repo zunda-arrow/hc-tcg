@@ -20,6 +20,7 @@ type BoardSlotDefs =
  */
 export class SlotComponent {
 	public static table = 'slots'
+	public static tableNumber = 1
 
 	readonly game: GameModel
 	readonly entity: SlotEntity
